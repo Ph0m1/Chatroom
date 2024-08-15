@@ -152,18 +152,18 @@ void Server::sendHistoryMsg(int fd, std::string msg){
     Json s;
     s["Size"] = size;
 
-    int flags = fcntl(fd, F_GETFL, 0);
-    if(flags == -1){
-        std::cerr << "fcntl(F_GETFL) failed"<< std::endl;
-        return;
-    }
+    // int flags = fcntl(fd, F_GETFL, 0);
+    // if(flags == -1){
+    //     std::cerr << "fcntl(F_GETFL) failed"<< std::endl;
+    //     return;
+    // }
 
-    flags &= ~O_NONBLOCK;
+    // flags &= ~O_NONBLOCK;
 
-    if(fcntl(fd, F_SETFL, flags) == -1){
-        std::cerr << "fcntl(F_SETFL) failed"<< std::endl;
-        return;
-    }
+    // if(fcntl(fd, F_SETFL, flags) == -1){
+    //     std::cerr << "fcntl(F_SETFL) failed"<< std::endl;
+    //     return;
+    // }
 
     sendMsg(fd, HistoryMsg, s.dump());
     const char* p = data.c_str();
@@ -191,10 +191,10 @@ void Server::sendHistoryMsg(int fd, std::string msg){
         size -= sent_bytes;
     }
 
-    if(fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1){
-        std::cerr << "fcntl(F_SETFL) failed"<< std::endl;
-        return;
-    }
+    // if(fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1){
+    //     std::cerr << "fcntl(F_SETFL) failed"<< std::endl;
+    //     return;
+    // }
 
 }
 
