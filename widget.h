@@ -30,7 +30,7 @@ public:
     void printinfo(std::string msg);
     void adduser(std::string id, std::string name);
     void deleteuser(std::string id, std::string name);
-
+    void banneduser();
     ~Widget();
 signals:
     //关闭窗口信号
@@ -48,6 +48,8 @@ public slots:
     // void recvFile(std::string filename);
     void recvFileask(std::string filename);
     void fileinfo(std::string fileinfo);
+
+    void limitText();
 
 private:
 

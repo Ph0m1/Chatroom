@@ -64,7 +64,7 @@ private:
     void deleteAccount(int fd,std::string str);
     void resetpasswd(int fd,std::string str);
     void createGroup(int fd, std::string str);
-    void joinGroup(int fd, std::string str);
+    void joinGroup(int fd, std::string gid);
     void exitGroup(int fd, std::string str);
 
     void enter(int fd, std::string str);
@@ -84,6 +84,7 @@ private:
     void refreshFriendlist(int fd, std::string str);
 
     void acceptfile(int fd, std::string str);
+    void sendHistoryMsg(int fd, std::string msg);
     std::unordered_map<std::string, std::string> regetFriendlist(std::string id);
 
     void logout(std::string id);

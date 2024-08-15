@@ -37,6 +37,7 @@ enum MsgType{
     FriendDelete,
     FriendBanned,
     ReFreshFriendList,
+    ReFreshGroupList,
 
     // 消息状态
     Unread,
@@ -48,7 +49,8 @@ enum MsgType{
     GroupJoinYes,
     GroupJoinNo,
 
-    AcceptFiles
+    AcceptFiles,
+    HistoryMsg
 };
 
 

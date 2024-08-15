@@ -308,7 +308,7 @@
                    </widget>
                   </item>
                   <item>
-                   <widget class="QToolButton" name="clikeButton">
+                   <widget class="QToolButton" name="bannedBtn">
                     <property name="toolTip">
                      <string>窗口抖动</string>
                     </property>

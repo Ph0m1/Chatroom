@@ -15,7 +15,7 @@ Menu2::Menu2(QWidget *parent, int sfd, const std::string& data, int port, std::s
     : QWidget(parent)
     , fd(sfd)
     , ui(new Ui::Menu2)
-    , threadPool(new ThreadPool(4))
+    , threadPool(new ThreadPool(10))
     , port(port)
     , ip(ip)
 {
@@ -34,7 +34,7 @@ Menu2::Menu2(QWidget *parent, int sfd, const std::string& data, int port, std::s
     std::unordered_map<std::string,std::string> fl = datajs["FriendList"].get<std::unordered_map<std::string,std::string>>();
     qDebug()<<"12";
     std::unordered_map<std::string,std::string> gl = datajs["GroupList"].get<std::unordered_map<std::string,std::string>>();
-    std::unordered_map<std::string,std::string> ml = datajs["MsgList"].get<std::unordered_map<std::string,std::string>>();
+    // std::unordered_map<std::string,std::string> ml = datajs["MsgList"].get<std::unordered_map<std::string,std::string>>();
     std::unordered_map<std::string, std::unordered_map<std::string, std::string>> gmembers
         = datajs["GroupMembers"].get<std::unordered_map<std::string, std::unordered_map<std::string, std::string>>>();
     m_name = infojs["username"].get<std::string>();
@@ -102,7 +102,7 @@ Menu2::Menu2(QWidget *parent, int sfd, const std::string& data, int port, std::s
     Menu2::btnIsChecked[1] = true;
     Menu2::setFbtn(fl,1, gmembers);
     Menu2::setFbtn(gl,2, gmembers);
-    Menu2::setMbtn(ml);
+
     friendaddbtn = new BadgeToolButton;
     groupinfobtn = new BadgeToolButton;
 
@@ -168,17 +168,25 @@ Menu2::Menu2(QWidget *parent, int sfd, const std::string& data, int port, std::s
     connect(this, SIGNAL(friendsg(std::string)), this,  SLOT(friendAdd(std::string)));
     connect(this, SIGNAL(refreshFriendList(std::string)),
             this, SLOT(updateFriendList(std::string)));
+    connect(this, SIGNAL(refreshGroupList(std::string)), this, SLOT(updateGroupList(std::string)));
     // connect(this, SIGNAL(receviedfile(std::string)), this, SLOT(recvfile(std::string)));
     connect(this, SIGNAL(friendaddmsg(std::string)),
             this, SLOT(updatefriendaddbtn(std::string)));
+    connect(this, SIGNAL(groupsg(std::string)), this, SLOT(updategroupinfobtn(std::string)));
     connect(setting, SIGNAL(exit()), this, SLOT(exit()));
+    connect(this, SIGNAL(historys(std::string)), this, SLOT(sendhistory(std::string)));
     // connect(this, SIGNAL(newMsg(std::string)), this, SLOT(updateList(std::string)));
+
     // 启动线程池
     threadPool->init();
 
     // 启动一个线程来接收服务器消息
     threadPool->submit([this] { readFromServer(this->fd); });
     // readFromServer(fd);
+
+    threadPool->submit([=](){
+        requestHistoryMsg();
+    });
 }
 
 
@@ -190,6 +198,9 @@ void Menu2::sendFile(const std::string &filepath, std::string uid){
         // 修改sendFile打包的json
         ::sendFile(sock->getfilefd(), filepath, uid, m_id);
         sendMsg(sock->getfilefd(), Disconnent, "[Finshed work]");
+        size_t pos = filepath.find_last_of('/');
+        std::string filename = filepath.substr(pos + 1);
+        emit sendfilesuccessfully(filename, 1);
         delete sock;
     });
 }
@@ -212,10 +223,20 @@ void Menu2::recvfile(std::string fileinfo){
 
         recvFile(sock->getfilefd(), filesize, filename, "received_files");
         sendMsg(sock->getfilefd(), Disconnent, "[Finshed work]");
+        emit recvfilesuccessfully(filename, 2);
         delete sock;
     });
     // recvFile(fd, filesize, filename, "received_files");
     // resume();
+}
+
+void Menu2::showfilesuccessfully(std::string filename, int flag){
+    QString info;
+    if(flag ==1)
+    info = QString::fromStdString(filename + "已发送完成!");
+    else
+        info = QString::fromStdString(filename + "已接收完成! 储存在当前目录的 received_files 中");
+    QMessageBox::information(this, "提示", info);
 }
 void Menu2::readFromServer(int fd){
 
@@ -233,6 +254,9 @@ void Menu2::readFromServer(int fd){
             case ReFreshFriendList:
                 emit refreshFriendList(buffer);
                 break;
+            case ReFreshGroupList:
+                emit refreshGroupList(buffer);
+                break;
             case FriendAdd:
                 emit friendsg(buffer);
                 break;
@@ -245,6 +269,9 @@ void Menu2::readFromServer(int fd){
             case File:
                 // pause();
                 emit receivedfile(buffer);
+                break;
+            case GroupJoin:
+                emit groupsg(buffer);
                 break;
             case PopFriendAddList:
                 auto t = std::remove(friendaddlist.begin(), friendaddlist.end(), buffer);
@@ -318,6 +345,17 @@ void Menu2::deletefriends(const std::vector<std::string> &friends){
     // removefbtn();
 }
 
+void Menu2::updategroupinfobtn(std::string id){
+    groupinfobtn->addUnreadCount(1);
+    // std::string id = idname.substr(0,9);
+    // std::string name = idname.substr(9);
+    auto t = std::find(groupinfolist.begin(), groupinfolist.end(), id);
+    if(t == groupinfolist.end()){
+        groupinfolist.push_back(id);
+        emit addgroupRow(id);
+    }
+}
+
 void Menu2::updatefriendaddbtn(std::string id){
     friendaddbtn->addUnreadCount(1);
     auto t = std::find(friendaddlist.begin(), friendaddlist.end(), id);
@@ -356,7 +394,11 @@ void Menu2::updateList(std::string id){
 
 void Menu2::updateFriendList(std::string msg){
     qDebug() << msg.c_str();
-    resetFbtn(msg);
+    resetFbtn(msg, 1);
+}
+
+void Menu2::updateGroupList(std::string msg){
+    resetFbtn(msg,0);
 }
 
 void Menu2::friendAdd(std::string msg){
@@ -373,6 +415,47 @@ void Menu2::friendAdd(std::string msg){
         return;
     }
     QMessageBox::information(this, "提示", "已发送好友请求！");
+}
+
+void Menu2::requestHistoryMsg(){
+    FileSocket *sock = new FileSocket(this->ip, this->port);
+    int newfd = sock->getfilefd();
+    sendMsg(newfd, HistoryMsg, m_id);
+    size_t size;
+    std::string rec;
+    if(recvMsg(newfd,rec) != HistoryMsg){
+        sendMsg(newfd, Disconnent, "[RECEIVED ERROR]");
+        delete sock;
+        return;
+    }
+    Json a = Json::parse(rec.data());
+    size = a["Size"].get<size_t>();
+    ssize_t received_bytes;
+    size_t received_size = 0;
+    std::string historymsg;
+    char buffer[5242880];
+    while(received_size < size){
+        received_bytes = recv(newfd, buffer, sizeof(buffer) <= size - received_size? sizeof(buffer) : size - received_size,0);
+        if(received_bytes < 0){
+            std::cerr << "Failed to receive historymsg" << std::endl;
+            delete sock;
+            return;
+        }
+        if(received_bytes == 0){
+            // 连接关闭，提前结束
+            break;
+        }
+        historymsg.append(buffer);
+        received_size += received_bytes;
+    }
+    sendMsg(newfd, Disconnent,"[RECEIVED SUCCESSFULLY]");
+    delete sock;
+    emit historys(historymsg);
+}
+
+void Menu2::sendhistory(std::string historymsg){
+    Json msges = Json::parse(historymsg);
+    setMbtn(msges["Msges"].get<std::unordered_map<std::string, std::string>>());
 }
 
 void Menu2::setMbtn(std::unordered_map<std::string,std::string> list){
@@ -411,18 +494,21 @@ void Menu2::setMbtn(std::unordered_map<std::string,std::string> list){
         // Widget *currentWidget = qStack->widget(index);
         // printmsg(key, msg, flag, currentWidget);
     }
-    std::reverse(mlist.begin(),mlist.end());
+    // std::reverse(mlist.begin(),mlist.end());
     emit sendlist(mlist);
 }
 
-void Menu2::resetFbtn(const std::string& str){
+void Menu2::resetFbtn(const std::string& str, int flag){
     qDebug() << str.c_str();
 
     Json js = Json::parse(str.data());
     std::string uid = js["Uid"].get<std::string>();
     std::string uname = js["Uname"].get<std::string>();
     BadgeToolButton* btn = new BadgeToolButton(this);
-    friendlist[uid] = uname;
+    if(flag ==1)
+        friendlist[uid] = uname;
+    else
+        grouplist[uid] = uname;
     // QToolButton *btn = new QToolButton(this);
     // 加载图标
     btn -> setIcon(QPixmap(":/Header/Header.jpeg"));
@@ -445,7 +531,14 @@ void Menu2::resetFbtn(const std::string& str){
     ui->listLayout->addWidget(btn);
     this->vector.push_back(btn);
     FriendIsShow.push_back(false);
-    Widget *w = new Widget(nullptr, uname.data(), uid.data(), m_name.data(), m_id.data(), fd);
+    Widget *w;
+    if(flag == 1)
+    {
+        w = new Widget(nullptr, uname.c_str(), uid.c_str(), m_name.data(), m_id.data(), fd);
+    }else if(flag == 2)
+    {
+        w = new Widget(nullptr, uname.c_str(), uid.c_str(), m_name.data(), m_id.data(), fd, js["Members"]);
+    }
     qStack->addWidget(w);
     lists.insert(std::pair<std::string, BadgeToolButton*>(uid, btn));
     connect(this, SIGNAL(fileinfos(std::string)), w, SLOT(fileinfo(std::string)));
@@ -454,7 +547,7 @@ void Menu2::resetFbtn(const std::string& str){
     connect(w, SIGNAL(readmsg(std::string)), this, SLOT(updateList(std::string)));
     connect(w, SIGNAL(recvf(std::string)), this, SLOT(recvfile(std::string)));
 
-    connect(btn, &QToolButton::clicked,[this, i = vector.count() - 1](){
+    connect(btn, &QToolButton::clicked, this, [this, i = vector.count() - 1](){
         vector[i]->setUnreadCount(0);
         FriendIsShow[i] = true;
         qStack->setCurrentIndex(i); // 切换对话框

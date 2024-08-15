@@ -33,7 +33,7 @@ public:
     ~Menu2();
 private:
 
-    void resetFbtn(const std::string &str);
+    void resetFbtn(const std::string &str, int flag);
     void setFbtn(std::unordered_map<std::string,std::string> list, int flag,
                     std::unordered_map<std::string, std::unordered_map<std::string, std::string>> gmm);
     void setMbtn(std::unordered_map<std::string,std::string> list);
@@ -84,23 +84,33 @@ private:
     std::unordered_map<std::string, std::string> grouplist;
     QStackedWidget *qStack = new QStackedWidget(this); // 聊天窗口
     // QStackedLayout *listStack = new QStackedLayout(this); // 消息/好友列表
+
+    std::vector<std::string> msglist;// 聊天记录
 signals:
+    void sendfilesuccessfully(std::string filename,int flag);
+    void recvfilesuccessfully(std::string filename,int flag);
     void sendinfos(std::string ll);
     void sendlist(std::vector<std::string> ll);
     void sendData(std::string msg);
     void friendsg(std::string msg);
     void refreshFriendList(std::string list);
+    void refreshGroupList(std::string list);
     void friendaddmsg(std::string str);
     void addRowList(std::string str);
     void addgroupRow(std::string str);
     void receivedfile(std::string fileinfo);
     void fileinfos(std::string fileinfo);
+    void historys(std::string historymsg);
+    void groupsg(std::string idname);
     // void newMsg(std::string id);
 public slots:
+    void showfilesuccessfully(std::string filename, int flag);
+    void updategroupinfobtn(std::string id);
     void updatefriendaddbtn(std::string id);
     void updateList(std::string id);
     void friendAdd(std::string msg);
     void updateFriendList(std::string list);
+    void updateGroupList(std::string list);
     void deleteAccont();
     void exit();
 
@@ -111,6 +121,10 @@ public slots:
     void recvfile(std::string fileinfo);
 
     void sendFile(const std::string &filepath, std::string uid);
+
+    void requestHistoryMsg();
+
+    void sendhistory(std::string historymsg);
 private slots:
     void showCreateGroupDialog();
     void showDeleteFriendDialog();

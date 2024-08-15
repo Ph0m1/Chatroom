@@ -69,13 +69,17 @@ Widget::Widget(QWidget *parent, QString uname, QString uid, QString name, QStrin
         ui->msgTextEdit->setFocus();
     });
 
+    // 设置屏蔽用户按钮
+    connect(ui->bannedBtn, &QToolButton::clicked, this, &Widget::banneduser);
+    // 设置输入长度
+    connect(ui->msgTextEdit, &QTextEdit::textChanged, this, &Widget::limitText);
     // 设置文件
     f = new FileMenu;
     connect(ui->fileButton, &QToolButton::clicked,[=](){
         f->show();
     });
 
-        connect(this, SIGNAL(fileinfos(std::string)), f, SLOT(addFilelist(std::string)));
+    connect(this, SIGNAL(fileinfos(std::string)), f, SLOT(addFilelist(std::string)));
 
     connect(f, SIGNAL(seletedfilename(std::string)), this, SLOT(recvFileask(std::string)));
 
@@ -151,6 +155,11 @@ Widget::Widget(QWidget *parent, QString uname, QString uid, QString name, QStrin
         ui->msgTextEdit->setFontUnderline(checked);
         ui->msgTextEdit->setFocus();
     });
+    // 设置屏蔽用户按钮
+    connect(ui->bannedBtn, &QToolButton::clicked, this, &Widget::banneduser);
+
+    // 设置输入长度
+    connect(ui->msgTextEdit, &QTextEdit::textChanged, this, &Widget::limitText);
     // 设置文件
     f = new FileMenu;
     connect(ui->fileButton, &QToolButton::clicked, this, [=](){
@@ -235,11 +244,11 @@ QString Widget::getMsg(){
 
 void Widget::getData(std::string data){
     Json js = Json::parse(data.data());
-    std::string msg = js["Msg"].get<std::string>();
+    std::string msg = js["Msg"].get<std::string>();//76712*****301***
     std::string time = js["Time"].get<std::string>();
     std::string sender = msg.substr(0,9);
     std::string recver = msg.substr(9,9);
-    std::string uid = u_id.toStdString();
+    std::string uid = u_id.toStdString();//76712
     std::string mid = m_id.toStdString();
     // 0表示自己发出的，1表示别人发给自己的，2表示通知
     if(uid == sender){
@@ -258,7 +267,7 @@ void Widget::getData(std::string data){
         if(mid == sender){
             prints(time, msg.substr(18), 0);
         }else{
-            prints(time,msg.substr(18),2);
+            // prints(time, msg.substr(18), 2);
         }
     }
 
@@ -339,7 +348,7 @@ void Widget::prints(std::string time, std::string msg, int flag){
         ui->MsgBrowser->append("["+m_name+"] " + static_cast<QString>(time.c_str()));
     }
     else if(flag == 2){
-        qDebug() << "NIDAINDA";
+        // qDebug() << "NIDAINDA";
         printinfo(msg);
         return;
     }else if(flag == 3){
@@ -354,6 +363,26 @@ void Widget::prints(std::string time, std::string msg, int flag){
 void Widget::closeEvent(QCloseEvent *){
     emit this->closeWidget();
     // sendMsg(UserLeft);
+}
+
+void Widget::limitText(){
+    int maxLength = 4<<22;
+    QString text = ui->msgTextEdit->toHtml();
+    if (text.length() > maxLength) {
+        text = text.left(maxLength);
+        ui->msgTextEdit->setPlainText(text);
+
+        // 保持光标在文本末尾
+        QTextCursor cursor = ui->msgTextEdit->textCursor();
+        cursor.movePosition(QTextCursor::End, QTextCursor::MoveAnchor);
+        ui->msgTextEdit->setTextCursor(cursor);
+    }
+    ui->msgTextEdit->update();
+}
+
+void Widget::banneduser(){
+    std::string data = m_id.toStdString() + u_id.toStdString();
+    sendMsg(fd, FriendBanned, data);
 }
 
 Widget::~Widget()
