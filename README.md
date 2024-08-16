@@ -31,16 +31,22 @@ ubuntu：
 ```shell
     sudo apt install libhiredis-dev libssl-dev qt6-base-dev qtbase5-dev qttools5-dev-tools qttools5-dev qt6-tools-dev qt6-tools-dev-tools qt6-linguist-tools nlohmann-json-dev
 ```
-```
 
 - 编译运行
 
 ```shell
     mkdir build && cd build
     cmake .. 
-    make -j20
-    ./server
+```
+只编译客户端
+```shell
+    make client -j18
     ./client
+```
+只编译服务端
+```shell
+    make server -j18
+    ./server
 ```
 
 ## 项目结构
