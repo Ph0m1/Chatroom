@@ -22,6 +22,9 @@ enum MsgType{
     GroupCreat,
     GroupJoin,
     GroupExit,
+    RemoveUser,
+    SetOP,
+    RemoveOP,
 
     UserEnter,
     UserLeft,
@@ -38,6 +41,7 @@ enum MsgType{
     FriendBanned,
     ReFreshFriendList,
     ReFreshGroupList,
+
 
     // 消息状态
     Unread,

@@ -138,6 +138,9 @@ void Server::handleMessage(int fd, MsgType type, const std::string &msg) {
             break;
         case GroupJoinNo:
             break;
+        case RemoveUser:
+            exitGroup(fd, msg);
+            break;
         default:
             std::cout << "Unknown message type: " << type << std::endl;
             break;
@@ -145,6 +148,19 @@ void Server::handleMessage(int fd, MsgType type, const std::string &msg) {
     }
 
 void Server::sendHistoryMsg(int fd, std::string msg){
+    int flags = fcntl(fd, F_GETFL, 0);
+    if(flags == -1){
+        std::cerr << "fcntl(F_GETFL) failed"<< std::endl;
+        return;
+    }
+
+    flags &= ~O_NONBLOCK;
+
+    if(fcntl(fd, F_SETFL, flags) == -1){
+        std::cerr << "fcntl(F_SETFL) failed"<< std::endl;
+        return;
+    }
+
     Json js;
     js["Msges"] = getMl(msg);
     std::string data = js.dump();
@@ -152,18 +168,6 @@ void Server::sendHistoryMsg(int fd, std::string msg){
     Json s;
     s["Size"] = size;
 
-    // int flags = fcntl(fd, F_GETFL, 0);
-    // if(flags == -1){
-    //     std::cerr << "fcntl(F_GETFL) failed"<< std::endl;
-    //     return;
-    // }
-
-    // flags &= ~O_NONBLOCK;
-
-    // if(fcntl(fd, F_SETFL, flags) == -1){
-    //     std::cerr << "fcntl(F_SETFL) failed"<< std::endl;
-    //     return;
-    // }
 
     sendMsg(fd, HistoryMsg, s.dump());
     const char* p = data.c_str();
@@ -172,8 +176,9 @@ void Server::sendHistoryMsg(int fd, std::string msg){
     char buffer[5242880];
     size_t len;
     while(size > 0){
+        std::cout << "[TESTING INFO]" << size << std::endl<<std::endl;
         len = size < sizeof(buffer) ? size : sizeof(buffer);
-        sent_bytes = send(fd, p, len, 0);
+        sent_bytes = send(fd, p, size, 0);
         if(sent_bytes <= -1){
             if(errno == EINTR && sent_bytes == -1){
                 continue;
@@ -191,10 +196,10 @@ void Server::sendHistoryMsg(int fd, std::string msg){
         size -= sent_bytes;
     }
 
-    // if(fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1){
-    //     std::cerr << "fcntl(F_SETFL) failed"<< std::endl;
-    //     return;
-    // }
+    if(fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1){
+        std::cerr << "fcntl(F_SETFL) failed"<< std::endl;
+        return;
+    }
 
 }
 
@@ -345,7 +350,7 @@ void Server::login(int fd,std::string str){
         std::vector<std::string> ll =  r.Smembers(t.first + "member");
         std::unordered_map<std::string, std::string> ss;
         for(auto& s : ll){
-            ss[s.substr(0,9)] = r.Hget("Userid", s.substr(0,9));
+            ss[s] = r.Hget("Userid", s.substr(0,9));
         }
         gmembers[t.first] = ss;
     }
@@ -533,7 +538,42 @@ void Server::joinGroup(int fd, std::string str){
     r.Hmset(users[fd] + "g" , str, s);
 }
 void acceptJoinGroup();
-void exitGroup(int fd, std::string str);
+
+void Server::exitGroup(int fd, std::string str){
+    // 移除：gid+member uid+g 更新群按钮
+    std::string gid = str.substr(0,9);
+    std::string uid = str.substr(9,9);
+    std::string mid = users[fd];
+    Redis r;
+    std::string name = r.Hget("Userid",uid);
+    r.Srem(gid+"member", str.substr(9,10));
+    r.Hdel(uid + "g", gid);
+
+    std::vector<std::string> members = r.Smembers(gid + "member");
+    for(auto & member : members){
+        std::string id = member.substr(0,9);
+        if(onlinelist.find(id) != onlinelist.end()){
+            sendMsg(onlinelist[id], RemoveUser, gid + uid);
+            Json jd;
+            jd["Msg"] = gid + "000000000" + name + "已退出群聊";
+            jd["Time"] = gettime();
+            jd["Status"] = Readen;
+            sendMsg(onlinelist[id], Msg, jd.dump());
+        }
+
+    }
+
+}
+std::string Server::gettime(){
+    auto t = std::time(nullptr);
+    auto tm = *std::localtime(&t);
+
+    // 将时间格式化为字符串
+    std::ostringstream oss;
+    oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
+    // std::string time = oss.str();
+    return oss.str();
+}
 
 void enter(int fd, std::string str);
 void left(int fd, std::string str);
@@ -563,6 +603,14 @@ void Server::Message(int fd, std::string str){
             Json ret;
             ret["Time"] = js["Time"].get<std::string>();
             ret["Msg"] = recver + "000000000" + "发送失败，你已被管理员禁言";
+            ret["Status"] = Readen;
+            sendMsg(fd, Msg, ret.dump());
+            return;
+        }
+        if(!r.Hexists(sender + "g" ,recver)){
+            Json ret;
+            ret["Time"] = js["Time"].get<std::string>();
+            ret["Msg"] = recver + "000000000" + "发送失败，你已被移出群聊";
             ret["Status"] = Readen;
             sendMsg(fd, Msg, ret.dump());
             return;
@@ -856,10 +904,10 @@ void Server::bannedFriend(int fd, std::string str){
 
 std::string Server::getusername(std::string uid){
     Redis r;
-    std::string info = r.Hget(UserInfo,uid);
-    Json js = Json::parse(info.data());
-    std::string uname = js["username"].get<std::string>();
-    return uname;
+    return r.Hget("Userid",uid);
+    // Json js = Json::parse(info.data());
+    // std::string uname = js["username"].get<std::string>();
+    // return uname;
 }
 
 std::unordered_map<std::string,std::string> getFl(const std::string &key){

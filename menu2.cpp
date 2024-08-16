@@ -435,7 +435,7 @@ void Menu2::requestHistoryMsg(){
     std::string historymsg;
     char buffer[5242880];
     while(received_size < size){
-        received_bytes = recv(newfd, buffer, sizeof(buffer) <= size - received_size? sizeof(buffer) : size - received_size,0);
+        received_bytes = recv(newfd, buffer, size,0);
         if(received_bytes < 0){
             std::cerr << "Failed to receive historymsg" << std::endl;
             delete sock;
@@ -448,12 +448,16 @@ void Menu2::requestHistoryMsg(){
         historymsg.append(buffer);
         received_size += received_bytes;
     }
+    // std::cout<<"{}asdasdasdasdasdasdhjasgdfyuasgfyatsudgfasuygdfasyhgfgasyu"<<received_size;
     sendMsg(newfd, Disconnent,"[RECEIVED SUCCESSFULLY]");
+    std::cout<<"11111asdasdasdwsd ";
     delete sock;
+    std::cout<<"masdasdasdwsd ";
     emit historys(historymsg);
 }
 
 void Menu2::sendhistory(std::string historymsg){
+
     Json msges = Json::parse(historymsg);
     setMbtn(msges["Msges"].get<std::unordered_map<std::string, std::string>>());
 }

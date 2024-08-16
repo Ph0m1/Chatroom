@@ -158,7 +158,6 @@ int writen(int fd,std::string buf, int len){
 
 MsgType recvMsg(int sfd,std::string &str){
 
-
     int len = 0;
     read(sfd,&len,4);
     len = ntohl(len);
@@ -171,10 +170,13 @@ MsgType recvMsg(int sfd,std::string &str){
         return Failure;
     }
     buf[len] = '\0';
+    std::cout << "[BUFFERDATAS]"<< buf.data() << std::endl;
     nlohmann::json js = nlohmann::json::parse(buf.data());
+
     str.append(js["Msg"].get<std::string>());
     if (ret > 0)
         return js["MsgType"].get<MsgType>();
+
     return Failure;
 }
 

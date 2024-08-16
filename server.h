@@ -13,6 +13,7 @@
 #include <iomanip>
 #include <filesystem>
 
+
 #define UsernameHash "UsernameSet"
 #define UserInfo "UserInfo"
 #define UidSet "UidSet"
@@ -46,7 +47,7 @@ private:
 private:
     void pause();
     void resume();
-
+    std::string gettime();
     void handleClient(int client_fd);
 
     void handleMessage(int client_fd, MsgType type, const std::string &message);

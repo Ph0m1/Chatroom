@@ -2,6 +2,8 @@
 #define WIDGET_H
 
 #include <QWidget>
+#include <QMenu>
+#include <QTableWidgetItem>
 #include "mysocket.h"
 #include <QDebug>
 #include "createfrienddialog.h"
@@ -19,6 +21,9 @@ class Widget : public QWidget
 {
     Q_OBJECT
 
+private:
+    void showUserTableContextMenu(const QPoint &pos);
+    std::string getUserId(QTableWidgetItem *item);
 public:
     Widget(QWidget *parent,QString uname, QString uid, QString id, QString name,int sfd);
     Widget(QWidget *parent,QString gname, QString gid, QString id, QString name,int sfd,
@@ -57,6 +62,7 @@ private:
     CreateFriendDialog *w;
     FileMenu *f;
     std::unordered_map<std::string,std::string> members;
+    std::unordered_map<std::string, int> users;
     // std::unordered_map<std::string, std::string> friends;
     QString m_name;
     QString m_id;
