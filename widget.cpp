@@ -80,7 +80,7 @@ Widget::Widget(QWidget *parent, QString uname, QString uid, QString name, QStrin
     connect(ui->msgTextEdit, &QTextEdit::textChanged, this, &Widget::limitText);
     // 设置文件
     f = new FileMenu;
-    connect(ui->fileButton, &QToolButton::clicked,[=](){
+    connect(ui->fileButton, &QToolButton::clicked, this, [=](){
         f->show();
     });
 

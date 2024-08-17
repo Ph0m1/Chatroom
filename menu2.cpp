@@ -550,13 +550,17 @@ void Menu2::resetFbtn(const std::string& str, int flag){
     connect(this,SIGNAL(sendData(std::string)),w,SLOT(getData(std::string)));
     connect(w, SIGNAL(readmsg(std::string)), this, SLOT(updateList(std::string)));
     connect(w, SIGNAL(recvf(std::string)), this, SLOT(recvfile(std::string)));
-
+    connect(w, SIGNAL(sendf(std::string,std::string)), this, SLOT(sendFile(std::string,std::string)));
     connect(btn, &QToolButton::clicked, this, [this, i = vector.count() - 1](){
         vector[i]->setUnreadCount(0);
         FriendIsShow[i] = true;
         qStack->setCurrentIndex(i); // 切换对话框
         ui->label->setText(this->vector[i]->text());
         qDebug() << "Button clicked:" << i << vector[i]->text();
+        for(auto &tt : vector){
+            tt->setChecked(false);
+        }
+        vector[i]->setChecked(true);
     });
 }
 
@@ -626,7 +630,10 @@ void Menu2::setFbtn(std::unordered_map<std::string,std::string> list, int flag,
             qStack->setCurrentIndex(i); // 切换对话框
             ui->label->setText(this->vector[i]->text());
             qDebug() << "Button clicked:" << i << vector[i]->text();
-
+            for(auto &tt : vector){
+                tt->setChecked(false);
+            }
+            vector[i]->setChecked(true);
         });
     }
 
