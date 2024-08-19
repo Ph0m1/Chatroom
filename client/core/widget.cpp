@@ -1,4 +1,4 @@
-#include "widget.h"
+#include "../include/widget.h"
 #include "./ui_widget.h"
 #include <QDataStream>
 #include <QMessageBox>
