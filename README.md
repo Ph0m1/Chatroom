@@ -57,6 +57,7 @@ ubuntu：
 
 ## 项目结构
 
+```sh
 .
 ├── chatroom_zh_CN.ts
 ├── client
@@ -144,3 +145,4 @@ ubuntu：
 ├── CMakeLists.txt
 ├── CMakeLists.txt.user
 └── server_run.sh
+```
